@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/go-rod/rod"
@@ -27,6 +28,44 @@ var testDevice = devices.Device{
 			Height: 1920,
 		},
 	},
+}
+
+var (
+	chromeBin = ""
+	dataDir   = ""
+	headless  = true
+	port      = 9222
+)
+
+func init() {
+	envChromeBin := "LAUNCHER_CHROMEBIN"
+	envDataDir := "LAUNCHER_DATADIR"
+	envHeadless := "LAUNCHER_NOHEADLESS"
+	envPort := "LAUNCHER_PORT"
+
+	envs := []string{envChromeBin, envDataDir, envHeadless, envPort}
+
+	log.Println("check environment variables", envs)
+
+	if os.Getenv(envChromeBin) != "" {
+		chromeBin = os.Getenv(envChromeBin)
+	}
+
+	if os.Getenv(envDataDir) != "" {
+		dataDir = os.Getenv(envDataDir)
+	}
+
+	if os.Getenv(envHeadless) != "" {
+		headless = false
+	}
+
+	if os.Getenv(envPort) != "" {
+		parsed, err := strconv.Atoi(os.Getenv(envPort))
+		if err != nil {
+			panic(err)
+		}
+		port = parsed
+	}
 }
 
 func main() {
@@ -56,15 +95,27 @@ func main() {
 		}
 	}()
 
-	binPath, found := launcher.LookPath()
+	if chromeBin == "" {
+		binPath, found := launcher.LookPath()
 
-	if found {
-		log.Printf("found browser bin from %s\n", binPath)
-	} else {
-		log.Printf("failed to find browser path\n")
+		if found {
+			log.Printf("found browser bin from %s\n", binPath)
+			chromeBin = binPath
+		} else {
+			log.Printf("failed to find browser path\n")
+		}
+
 	}
 
-	controlURL := launcher.New().RemoteDebuggingPort(9222).Headless(false).Bin(binPath).MustLaunch()
+	log.Println("launcher settings")
+	log.Println("----------")
+	log.Println("Bin :", chromeBin)
+	log.Println("UserDataDir :", dataDir)
+	log.Println("RemoteDebuggingPort :", port)
+	log.Println("Headless :", headless)
+	log.Println("----------")
+
+	controlURL := launcher.New().RemoteDebuggingPort(port).Headless(headless).Bin(chromeBin).UserDataDir(dataDir).MustLaunch()
 
 	log.Printf("launched browser with control url %s\n", controlURL)
 
