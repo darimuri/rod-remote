@@ -38,9 +38,9 @@ var (
 )
 
 func init() {
-	envChromeBin := "LAUNCHER_CHROMEBIN"
-	envDataDir := "LAUNCHER_DATADIR"
-	envHeadless := "LAUNCHER_NOHEADLESS"
+	envChromeBin := "LAUNCHER_CHROME_BIN"
+	envDataDir := "LAUNCHER_DATA_DIR"
+	envHeadless := "LAUNCHER_NO_HEADLESS"
 	envPort := "LAUNCHER_PORT"
 
 	envs := []string{envChromeBin, envDataDir, envHeadless, envPort}

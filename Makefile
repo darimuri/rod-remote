@@ -8,7 +8,7 @@ build-launcher: clean-launcher
 
 run-launcher: build-launcher
 	mkdir -p `pwd`/rod-remote-launcher
-	LAUNCHER_DATADIR=`pwd`/rod-remote-launcher LAUNCHER_NOHEADLESS=false ./launcher
+	LAUNCHER_DATA_DIR=`pwd`/rod-remote-launcher LAUNCHER_NO_HEADLESS=false ./launcher
 
 build-image-launcher:
 	docker build -t rod-remote-launcher:`git log -1 --pretty=%h` -f docker/Dockerfile.launcher ./
