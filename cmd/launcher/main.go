@@ -40,10 +40,10 @@ var (
 func init() {
 	envChromeBin := "LAUNCHER_CHROME_BIN"
 	envDataDir := "LAUNCHER_DATA_DIR"
-	envHeadless := "LAUNCHER_NO_HEADLESS"
+	envNoHeadless := "LAUNCHER_NO_HEADLESS"
 	envPort := "LAUNCHER_PORT"
 
-	envs := []string{envChromeBin, envDataDir, envHeadless, envPort}
+	envs := []string{envChromeBin, envDataDir, envNoHeadless, envPort}
 
 	log.Println("check environment variables", envs)
 
@@ -55,7 +55,7 @@ func init() {
 		dataDir = os.Getenv(envDataDir)
 	}
 
-	if os.Getenv(envHeadless) != "" {
+	if os.Getenv(envNoHeadless) == "true" {
 		headless = false
 	}
 
@@ -104,8 +104,9 @@ func main() {
 		} else {
 			log.Printf("failed to find browser path\n")
 		}
-
 	}
+
+	//chromeBin = `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
 
 	log.Println("launcher settings")
 	log.Println("----------")
@@ -115,7 +116,12 @@ func main() {
 	log.Println("Headless :", headless)
 	log.Println("----------")
 
-	controlURL := launcher.New().RemoteDebuggingPort(port).Headless(headless).Bin(chromeBin).UserDataDir(dataDir).MustLaunch()
+	controlURL := launcher.New().RemoteDebuggingPort(port).
+		Set("enable-automation", "false").
+		Set("no-first-run").
+		Set("password-store", "basic").
+		Set("use-mock-keychain").
+		Headless(headless).Bin(chromeBin).UserDataDir(dataDir).MustLaunch()
 
 	log.Printf("launched browser with control url %s\n", controlURL)
 

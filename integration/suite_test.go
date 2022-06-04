@@ -1,12 +1,12 @@
 package integration
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/devices"
-	"github.com/go-rod/rod/lib/launcher"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -40,19 +40,12 @@ var _ = Describe("nainom naver news profile reporter", Ordered, func() {
 	var cut control.Control
 	var profileURLs []string
 
-	AfterAll(func() {
-		cut.Close()
-	})
-
 	BeforeAll(func() {
 		if NaverLogin == "" || NaverPassword == "" {
 			Fail("NaverLogin, NaverPassword is required for this test")
 		}
 
-		binPath, found := launcher.LookPath()
-		Expect(found).To(BeTrue())
-
-		launcherURL := launcher.New().RemoteDebuggingPort(9222).Headless(false).Bin(binPath).MustLaunch()
+		launcherURL := "ws://127.0.0.1:9222/devtools/browser/059612b1-9c40-4de2-9c48-b8c3dc64dc30"
 
 		browser := rod.New().ControlURL(launcherURL)
 		err := browser.Connect()
@@ -60,14 +53,17 @@ var _ = Describe("nainom naver news profile reporter", Ordered, func() {
 
 		pages, err := browser.Pages()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(pages.Empty()).Should(BeTrue())
+
+		for _, p := range pages {
+			p.MustClose()
+		}
 
 		cut = control.Control{Browser: browser}
 		cut.DefaultDevice(testDevice.Landescape())
 	})
 
 	It("open nainom and get profile urls", func() {
-		pc, err := cut.OpenPage("https://nainom.com/", true)
+		pc, err := cut.OpenPage("https://nainom.com/reports/naver_account", true)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pc).NotTo(BeNil())
 
@@ -76,14 +72,14 @@ var _ = Describe("nainom naver news profile reporter", Ordered, func() {
 		err = pc.Timeout(time.Second * 3).WaitLoad()
 		Expect(err).NotTo(HaveOccurred())
 
-		profileURLs, err = pc.GetAttributesFrom("div#reports > ul > li > a", "href")
+		profileURLs, err = pc.GetAttributesFrom("ul > li > div > a", "href")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(profileURLs).NotTo(HaveCap(0))
 
 		pc.MustClose()
 	})
 
-	FIt("open naver and login", func() {
+	It("open naver and login", func() {
 		pc, err := cut.OpenPage("https://naver.com", true)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pc).NotTo(BeNil())
@@ -95,58 +91,41 @@ var _ = Describe("nainom naver news profile reporter", Ordered, func() {
 		Expect(accountDiv).NotTo(BeNil())
 		classAttr := accountDiv.MustAttribute("class")
 		Expect(classAttr).NotTo(BeNil())
-		Expect(*classAttr).To(ContainSubstring("sc_login")) //should be sc_my after login
 
-		Expect(accountDiv.MustHas("a.link_login")).To(BeTrue())
-		loginLink := accountDiv.MustElement("a.link_login")
-		Expect(loginLink).NotTo(BeNil())
+		if strings.Contains(*classAttr, "sc_login") {
+			Expect(*classAttr).To(ContainSubstring("sc_login")) //should be sc_my after login
 
-		clickedLink := loginLink.MustClick()
-		Expect(clickedLink).NotTo(BeNil())
+			Expect(accountDiv.MustHas("a.link_login")).To(BeTrue())
+			loginLink := accountDiv.MustElement("a.link_login")
+			Expect(loginLink).NotTo(BeNil())
 
-		pc.Timeout(time.Second * 5).MustWaitLoad()
+			clickedLink := loginLink.MustClick()
+			Expect(clickedLink).NotTo(BeNil())
 
-		Expect(pc.MustHas("form#frmNIDLogin")).To(BeTrue())
-		loginForm := pc.MustElement("form#frmNIDLogin")
-		Expect(loginForm).NotTo(BeNil())
+			pc.Timeout(time.Second * 5).MustWaitLoad()
 
-		Expect(loginForm.MustHas("input#id")).To(BeTrue())
-		idInput := loginForm.MustElement("input#id")
-		idInput.MustInput(NaverLogin)
+			Expect(pc.MustHas("form#frmNIDLogin")).To(BeTrue())
+			loginForm := pc.MustElement("form#frmNIDLogin")
+			Expect(loginForm).NotTo(BeNil())
 
-		Expect(loginForm.MustHas("input#pw")).To(BeTrue())
-		pwInput := loginForm.MustElement("input#pw")
-		pwInput.MustInput(NaverPassword)
+			Expect(loginForm.MustHas("input#id")).To(BeTrue())
+			idInput := loginForm.MustElement("input#id")
+			idInput.MustInput(NaverLogin)
 
-		Expect(loginForm.MustHas("label.keep_text")).To(BeTrue())
-		keepLabel := loginForm.MustElement("label.keep_text")
-		keepLabel.MustClick()
+			Expect(loginForm.MustHas("input#pw")).To(BeTrue())
+			pwInput := loginForm.MustElement("input#pw")
+			pwInput.MustInput(NaverPassword)
 
-		Expect(loginForm.MustHas("button.btn_login")).To(BeTrue())
-		loginButton := loginForm.MustElement("button.btn_login")
-		loginButton.MustClick()
+			Expect(loginForm.MustHas("label.keep_text")).To(BeTrue())
+			keepLabel := loginForm.MustElement("label.keep_text")
+			keepLabel.MustClick()
 
-		pc.Timeout(time.Second * 5).MustWaitLoad()
+			Expect(loginForm.MustHas("button.btn_login")).To(BeTrue())
+			loginButton := loginForm.MustElement("button.btn_login")
+			loginButton.MustClick()
 
-		Expect(pc.MustHas("form#frmNIDLogin")).To(BeTrue())
-		loginForm = pc.MustElement("form#frmNIDLogin")
-		Expect(loginForm).NotTo(BeNil())
-
-		Expect(loginForm.MustHas("fieldset.login_form")).To(BeTrue())
-		buttonSet := loginForm.MustElement("fieldset.login_form")
-		Expect(buttonSet).NotTo(BeNil())
-
-		Expect(buttonSet.MustHas("a.btn"))
-		saveButton := buttonSet.MustElement("a.btn")
-		Expect(saveButton).ShouldNot(BeNil())
-
-		buttonId := saveButton.MustAttribute("id")
-		Expect(buttonId).NotTo(BeNil())
-		Expect(*buttonId).To(Equal("new.save"))
-
-		saveButton.MustClick()
-
-		pc.Timeout(time.Second * 5).MustWaitLoad()
+			pc.Timeout(time.Second * 5).MustWaitLoad()
+		}
 
 		Expect(pc.MustHas("div#account")).To(BeTrue())
 		accountDiv = pc.MustElement("div#account")
@@ -154,5 +133,7 @@ var _ = Describe("nainom naver news profile reporter", Ordered, func() {
 		classAttr = accountDiv.MustAttribute("class")
 		Expect(classAttr).NotTo(BeNil())
 		Expect(*classAttr).To(ContainSubstring("sc_my"))
+
+		pc.MustClose()
 	})
 })
