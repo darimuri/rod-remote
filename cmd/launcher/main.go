@@ -116,21 +116,22 @@ func main() {
 	log.Println("Headless :", headless)
 	log.Println("----------")
 
-	controlURL := launcher.New().RemoteDebuggingPort(port).
+	controlURL := launcher.New().Logger(os.Stdout).RemoteDebuggingPort(port).
 		Set("enable-automation", "false").
 		Set("no-first-run").
 		Set("password-store", "basic").
 		Set("use-mock-keychain").
+		Set("start-maximized").
 		Headless(headless).Bin(chromeBin).UserDataDir(dataDir).MustLaunch()
 
 	log.Printf("launched browser with control url %s\n", controlURL)
 
-	browser = rod.New().ControlURL(controlURL)
-	err = browser.Connect()
+	// browser = rod.New().ControlURL(controlURL)
+	// err = browser.Connect()
 
-	if err != nil {
-		log.Panicf("failed to connect browser control url %s\n", controlURL)
-	}
+	// if err != nil {
+	// 	log.Panicf("failed to connect browser control url %s\n", controlURL)
+	// }
 
 	select {}
 }

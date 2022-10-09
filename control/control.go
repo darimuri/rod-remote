@@ -8,15 +8,19 @@ import (
 	"github.com/go-rod/rod"
 )
 
+func NewControl(b *rod.Browser) Control {
+	return Control{b: b}
+}
+
 type Control struct {
-	*rod.Browser
+	b *rod.Browser
 }
 
 func (c Control) OpenPage(url string, reuse bool) (*PageControl, error) {
 	var page *rod.Page
 
 	if reuse {
-		pages, err := c.Pages()
+		pages, err := c.b.Pages()
 		if err != nil {
 			return nil, err
 		}
@@ -33,7 +37,7 @@ func (c Control) OpenPage(url string, reuse bool) (*PageControl, error) {
 
 	if page == nil {
 		err := rod.Try(func() {
-			page = c.MustPage()
+			page = c.b.MustPage()
 		})
 		if err != nil {
 			return nil, err
@@ -44,17 +48,25 @@ func (c Control) OpenPage(url string, reuse bool) (*PageControl, error) {
 		return nil, err
 	}
 
-	return &PageControl{Page: page}, nil
+	return &PageControl{p: page}, nil
 }
 
 type PageControl struct {
-	*rod.Page
+	p *rod.Page
+}
+
+func (c PageControl) Close() error {
+	if c.p != nil {
+		return c.p.Close()
+	}
+
+	return nil
 }
 
 func (c PageControl) GetAttributesFrom(selector string, attribute string) ([]string, error) {
 	var attributes []string
 	err := rod.Try(func() {
-		els := c.MustElements(selector)
+		els := c.p.MustElements(selector)
 		attributes = make([]string, 0)
 
 		for _, el := range els {

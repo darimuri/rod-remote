@@ -2,4 +2,5 @@
 /.vscode
 /env.sh
 /launcher
-/rod-remote-launcher
+/.rod-remote-launcher
+/rod_pipeline/test_var.go

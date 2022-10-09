@@ -7,8 +7,8 @@ build-launcher: clean-launcher
 	CGO_ENABLED=0 go build -o launcher ./cmd/launcher/main.go
 
 run-launcher: build-launcher
-	mkdir -p `pwd`/rod-remote-launcher
-	LAUNCHER_DATA_DIR=`pwd`/rod-remote-launcher LAUNCHER_NO_HEADLESS=true ./launcher
+	mkdir -p `pwd`/.rod-remote-launcher
+	LAUNCHER_DATA_DIR=`pwd`/.rod-remote-launcher LAUNCHER_NO_HEADLESS=true ./launcher
 
 build-image-launcher:
 	docker build -t rod-remote-launcher:`git log -1 --pretty=%h` -f docker/Dockerfile.launcher ./
@@ -33,4 +33,4 @@ rm-image-launcher:
 
 launch-image-launcher:
 	mkdir -p `pwd`/rod-remote-launcher
-	docker run -it --name rod-remote-launcher -v `pwd`/rod-remote-launcher:/var/run/rod-remote-launcher rod-remote-launcher:`git log -1 --pretty=%h` bash
+	docker run -it --name rod-remote-launcher -v `pwd`/.rod-remote-launcher:/var/run/rod-remote-launcher rod-remote-launcher:`git log -1 --pretty=%h` bash
