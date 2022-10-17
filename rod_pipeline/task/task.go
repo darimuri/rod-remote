@@ -2,23 +2,20 @@ package task
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/cdp"
+	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"
+
+	"github.com/darimuri/rod-remote/rod_pipeline/types"
 )
 
-var _ ITask = (*Task)(nil)
-
-type ITask interface {
-	Do(p *rod.Page) error
-}
-
-type OpFunc func(p *rod.Page) error
+var _ types.ITask = (*Task)(nil)
 
 type Task struct {
-	op OpFunc
+	op types.OpFunc
 }
 
 func (t *Task) Do(p *rod.Page) error {
@@ -26,21 +23,21 @@ func (t *Task) Do(p *rod.Page) error {
 }
 
 type Tasks struct {
-	tasks []ITask
+	Tasks []types.ITask
 }
 
-func NewTasks(task ...ITask) *Tasks {
+func NewTasks(task ...types.ITask) *Tasks {
 	t := &Tasks{}
 	t.Append(task...)
 	return t
 }
 
-func (t *Tasks) Append(task ...ITask) {
-	t.tasks = append(t.tasks, task...)
+func (t *Tasks) Append(task ...types.ITask) {
+	t.Tasks = append(t.Tasks, task...)
 }
 
 func (t *Tasks) Do(p *rod.Page) error {
-	for _, task := range t.tasks {
+	for _, task := range t.Tasks {
 		if err := task.Do(p); err != nil {
 			return err
 		}
@@ -91,35 +88,66 @@ func WaitIdle(dur time.Duration) *Task {
 	return task
 }
 
-func (t *Tasks) Click(selector string) *Tasks {
-	t.Append(Click(selector))
+func (t *Tasks) Click(selector string, handler types.DialogHandlerFunc) *Tasks {
+	t.Append(Click(selector, handler))
 
 	return t
 }
 
-func Click(selector string) *Task {
+func Click(selector string, handler types.DialogHandlerFunc) *Task {
 	f := func(p *rod.Page) error {
 		el, err := p.Element(selector)
 		if err != nil {
 			return err
 		}
 
-		wait, handle := p.HandleDialog()
-		go func() {
-			wait()
-			errHandle := handle(&proto.PageHandleJavaScriptDialog{Accept: false, PromptText: ""})
-			if errHandle != nil {
-				if cdpError, ok := errHandle.(*cdp.Error); ok {
-					if cdpError.Code != -32602 { //No dialog is showing
-						panic(cdpError)
-					}
-				} else if errHandle.Error() != "context canceled" {
-					panic(errHandle)
-				}
-			}
-		}()
+		if err = el.Hover(); err != nil {
+			return err
+		}
+
+		if handler != nil {
+			timeout := p.Timeout(time.Minute)
+			wait, handle := timeout.HandleDialog()
+			go handler(wait, handle)
+		}
 
 		return el.Click(proto.InputMouseButtonLeft, 1)
+	}
+	task := &Task{op: f}
+	return task
+}
+
+func RemoveClass(selector string, class string) *Task {
+	f := func(p *rod.Page) error {
+		el, err := p.Element(selector)
+		if err != nil {
+			return err
+		}
+
+		_, errEval := el.Eval(fmt.Sprintf(`() => this.classList.remove('%s')`, class))
+		if errEval != nil {
+			return errEval
+		}
+
+		return nil
+	}
+	task := &Task{op: f}
+	return task
+}
+
+func AddClass(selector string, class string) *Task {
+	f := func(p *rod.Page) error {
+		el, err := p.Element(selector)
+		if err != nil {
+			return err
+		}
+
+		_, errEval := el.Eval(fmt.Sprintf(`() => this.classList.add('%s')`, class))
+		if errEval != nil {
+			return errEval
+		}
+
+		return nil
 	}
 	task := &Task{op: f}
 	return task
@@ -138,6 +166,10 @@ func Input(selector string, str string) *Task {
 			return err
 		}
 
+		if err = el.SelectAllText(); err != nil {
+			return err
+		}
+
 		if err = el.Input(str); err != nil {
 			return err
 		}
@@ -146,6 +178,19 @@ func Input(selector string, str string) *Task {
 	}
 	task := &Task{op: f}
 	return task
+}
+
+func Type(keys ...input.Key) *Task {
+	f := func(p *rod.Page) error {
+		if err := p.Keyboard.Type(keys...); err != nil {
+			return err
+		}
+
+		return nil
+	}
+	task := &Task{op: f}
+	return task
+
 }
 
 func (t *Tasks) Reload() *Tasks {
@@ -191,34 +236,14 @@ func Stop(message string) *Task {
 	return task
 }
 
-func (t *Tasks) If(op ConditionalFunc, trueTasks, falseTasks []ITask) *Tasks {
-	iftrue := NewTasks(trueTasks...)
-	iffalse := NewTasks(falseTasks...)
-
-	conditional := &If{op: op, iftrue: iftrue, iffalse: iffalse}
-
-	t.Append(conditional)
+func (t *Tasks) If(op types.ConditionalFunc, trueTasks, falseTasks []types.ITask) *Tasks {
+	t.Append(If(op, trueTasks, falseTasks))
 	return t
 }
 
-func (t *Tasks) While(op ConditionalFunc, trueTasks, falseTasks []ITask, maxRetry int) *Tasks {
-	iftrue := NewTasks(trueTasks...)
-	iffalse := NewTasks(falseTasks...)
-
-	conditional := &While{op: op, iftrue: iftrue, iffalse: iffalse, maxRetry: maxRetry}
+func (t *Tasks) While(op types.ConditionalFunc, trueTasks, falseTasks []types.ITask, maxRetry int) *Tasks {
+	conditional := While(op, trueTasks, falseTasks, maxRetry)
 
 	t.Append(conditional)
 	return t
-}
-
-func Then(task ...ITask) []ITask {
-	tasks := make([]ITask, 0)
-	tasks = append(tasks, task...)
-	return tasks
-}
-
-func Else(task ...ITask) []ITask {
-	tasks := make([]ITask, 0)
-	tasks = append(tasks, task...)
-	return tasks
 }
