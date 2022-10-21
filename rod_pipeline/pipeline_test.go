@@ -103,7 +103,7 @@ var _ = Describe("janginthe.com purchase", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("purchase using credit card", func() {
+	FIt("purchase using credit card", func() {
 		purchaseTasks := rp.Tasks(
 			task.Click("#addr_paymethod1", nil),
 			task.Click("#btn_payment", nil),
@@ -112,7 +112,7 @@ var _ = Describe("janginthe.com purchase", Ordered, func() {
 		testCut(cut, logoutCondition, loginAllTasks, loginFormTasks, purchaseTasks)
 	})
 
-	FIt("purchase using banking", func() {
+	It("purchase using banking", func() {
 		purchaseTasks := rp.Tasks(
 			task.Click("#addr_paymethod0", nil),
 			task.Input("#pname", "정구현"),
@@ -145,10 +145,14 @@ func testCut(cut *rp.Pipeline, logoutCondition types.ConditionalFunc, loginAllTa
 		Input("#quantity", "1").
 		While(task.Visible("#frm_order_act"), rp.Then(), rp.Else(
 			task.Click("div.ec-base-button > a.first", purchaseClickHandler),
+			task.Custom(func(p *rod.Page) error {
+				//time.Sleep(time.Millisecond * 100)
+				return nil
+			}),
 			task.WaitLoad(),
 			task.WaitIdle(time.Minute),
 			task.If(logoutCondition, loginFormTasks, rp.Else()),
-		), 100000).
+		), 1000000).
 		If(
 			task.Has("#frm_order_act"),
 			purchaseTasks,

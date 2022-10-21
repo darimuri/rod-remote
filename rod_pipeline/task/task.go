@@ -117,6 +117,20 @@ func Click(selector string, handler types.DialogHandlerFunc) *Task {
 	return task
 }
 
+func (t *Tasks) Custom(c func(p *rod.Page) error) *Tasks {
+	t.Append(Custom(c))
+
+	return t
+}
+
+func Custom(c func(p *rod.Page) error) *Task {
+	f := func(p *rod.Page) error {
+		return c(p)
+	}
+	task := &Task{op: f}
+	return task
+}
+
 func RemoveClass(selector string, class string) *Task {
 	f := func(p *rod.Page) error {
 		el, err := p.Element(selector)
