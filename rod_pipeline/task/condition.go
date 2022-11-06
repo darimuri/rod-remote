@@ -1,7 +1,7 @@
 package task
 
 import (
-	"github.com/go-rod/rod"
+	"strings"
 
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
 )
@@ -14,21 +14,21 @@ type IfTask struct {
 	iffalse *Tasks
 }
 
-func (c *IfTask) Do(p *rod.Page) error {
-	cond, err := c.op(p)
+func (c *IfTask) Do(ctx *types.PipelineContext) error {
+	cond, err := c.op(ctx)
 	if err != nil {
 		return err
 	}
 
 	if cond {
 		for _, t := range c.iftrue.Tasks {
-			if errT := t.Do(p); errT != nil {
+			if errT := t.Do(ctx); errT != nil {
 				return errT
 			}
 		}
 	} else {
 		for _, t := range c.iffalse.Tasks {
-			if errT := t.Do(p); errT != nil {
+			if errT := t.Do(ctx); errT != nil {
 				return errT
 			}
 		}
@@ -46,23 +46,23 @@ type WhileTask struct {
 	maxRetry int
 }
 
-func (c *WhileTask) Do(p *rod.Page) error {
+func (c *WhileTask) Do(ctx *types.PipelineContext) error {
 	for i := 0; i < c.maxRetry; i++ {
-		cond, err := c.op(p)
+		cond, err := c.op(ctx)
 		if err != nil {
 			return err
 		}
 
 		if cond {
 			for _, t := range c.iftrue.Tasks {
-				if errT := t.Do(p); errT != nil {
+				if errT := t.Do(ctx); errT != nil {
 					return errT
 				}
 			}
 			break
 		} else {
 			for _, t := range c.iffalse.Tasks {
-				if errT := t.Do(p); errT != nil {
+				if errT := t.Do(ctx); errT != nil {
 					return errT
 				}
 			}
@@ -73,8 +73,8 @@ func (c *WhileTask) Do(p *rod.Page) error {
 }
 
 func Has(selector string) types.ConditionalFunc {
-	f := func(p *rod.Page) (bool, error) {
-		has, _, err := p.Has(selector)
+	f := func(ctx *types.PipelineContext) (bool, error) {
+		has, _, err := ctx.P.Has(selector)
 		if err != nil {
 			return false, err
 		}
@@ -84,9 +84,30 @@ func Has(selector string) types.ConditionalFunc {
 	return f
 }
 
+func ContainsText(selector, text string) types.ConditionalFunc {
+	f := func(ctx *types.PipelineContext) (bool, error) {
+		has, el, err := ctx.P.Has(selector)
+		if err != nil {
+			return false, err
+		}
+		if false == has {
+			return has, nil
+		}
+
+		s, errText := el.Text()
+		if errText != nil {
+			return false, errText
+		}
+
+		return strings.Contains(strings.TrimSpace(s), text), nil
+	}
+
+	return f
+}
+
 func Visible(selector string) types.ConditionalFunc {
-	f := func(p *rod.Page) (bool, error) {
-		has, el, err := p.Has(selector)
+	f := func(ctx *types.PipelineContext) (bool, error) {
+		has, el, err := ctx.P.Has(selector)
 		if err != nil {
 			return false, err
 		}

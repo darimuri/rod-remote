@@ -3,7 +3,7 @@ module github.com/darimuri/rod-remote
 go 1.18
 
 require (
-	github.com/go-rod/rod v0.111.0
+	github.com/go-rod/rod v0.112.0
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.19.0
 )

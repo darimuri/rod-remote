@@ -12,23 +12,25 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 )
 
-var testDevice = devices.Device{
-	Title:          "Laptop with HiDPI screen",
-	Capabilities:   []string{},
-	UserAgent:      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36",
-	AcceptLanguage: "ko,en;q=0.9,en-US;q=0.8",
-	Screen: devices.Screen{
-		DevicePixelRatio: 2,
-		Horizontal: devices.ScreenSize{
-			Width:  1920,
-			Height: 1080,
-		},
-		Vertical: devices.ScreenSize{
-			Width:  1080,
-			Height: 1920,
-		},
-	},
-}
+//var testDevice = devices.Device{
+//	Title:          "Laptop with HiDPI screen",
+//	Capabilities:   []string{},
+//	UserAgent:      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36",
+//	AcceptLanguage: "ko,en;q=0.9,en-US;q=0.8",
+//	Screen: devices.Screen{
+//		DevicePixelRatio: 2,
+//		Horizontal: devices.ScreenSize{
+//			Width:  1920,
+//			Height: 1080,
+//		},
+//		Vertical: devices.ScreenSize{
+//			Width:  1080,
+//			Height: 1920,
+//		},
+//	},
+//}
+
+var testDevice = devices.IPhoneX
 
 var (
 	chromeBin = ""

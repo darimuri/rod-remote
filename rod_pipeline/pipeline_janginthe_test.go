@@ -103,7 +103,7 @@ var _ = Describe("janginthe.com purchase", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	FIt("purchase using credit card", func() {
+	It("purchase using credit card", func() {
 		purchaseTasks := rp.Tasks(
 			task.Click("#addr_paymethod1", nil),
 			task.Click("#btn_payment", nil),

@@ -18,8 +18,8 @@ type Task struct {
 	op types.OpFunc
 }
 
-func (t *Task) Do(p *rod.Page) error {
-	return t.op(p)
+func (t *Task) Do(c *types.PipelineContext) error {
+	return t.op(c)
 }
 
 type Tasks struct {
@@ -36,9 +36,9 @@ func (t *Tasks) Append(task ...types.ITask) {
 	t.Tasks = append(t.Tasks, task...)
 }
 
-func (t *Tasks) Do(p *rod.Page) error {
+func (t *Tasks) Do(c *types.PipelineContext) error {
 	for _, task := range t.Tasks {
-		if err := task.Do(p); err != nil {
+		if err := task.Do(c); err != nil {
 			return err
 		}
 	}
@@ -53,8 +53,8 @@ func (t *Tasks) Open(url string) *Tasks {
 }
 
 func Open(url string) *Task {
-	f := func(p *rod.Page) error {
-		return p.Navigate(url)
+	f := func(ctx *types.PipelineContext) error {
+		return ctx.P.Navigate(url)
 	}
 	task := &Task{op: f}
 	return task
@@ -67,8 +67,8 @@ func (t *Tasks) WaitLoad() *Tasks {
 }
 
 func WaitLoad() *Task {
-	f := func(p *rod.Page) error {
-		return p.WaitLoad()
+	f := func(ctx *types.PipelineContext) error {
+		return ctx.P.WaitLoad()
 	}
 	task := &Task{op: f}
 	return task
@@ -81,8 +81,8 @@ func (t *Tasks) WaitIdle(dur time.Duration) *Tasks {
 }
 
 func WaitIdle(dur time.Duration) *Task {
-	f := func(p *rod.Page) error {
-		return p.WaitIdle(dur)
+	f := func(ctx *types.PipelineContext) error {
+		return ctx.P.WaitIdle(dur)
 	}
 	task := &Task{op: f}
 	return task
@@ -95,8 +95,8 @@ func (t *Tasks) Click(selector string, handler types.DialogHandlerFunc) *Tasks {
 }
 
 func Click(selector string, handler types.DialogHandlerFunc) *Task {
-	f := func(p *rod.Page) error {
-		el, err := p.Element(selector)
+	f := func(ctx *types.PipelineContext) error {
+		el, err := ctx.P.Element(selector)
 		if err != nil {
 			return err
 		}
@@ -106,12 +106,41 @@ func Click(selector string, handler types.DialogHandlerFunc) *Task {
 		}
 
 		if handler != nil {
-			timeout := p.Timeout(time.Minute)
+			timeout := ctx.P.Timeout(time.Minute)
 			wait, handle := timeout.HandleDialog()
 			go handler(wait, handle)
 		}
 
 		return el.Click(proto.InputMouseButtonLeft, 1)
+	}
+	task := &Task{op: f}
+	return task
+}
+
+func (t *Tasks) Tap(selector string, handler types.DialogHandlerFunc) *Tasks {
+	t.Append(Tap(selector, handler))
+
+	return t
+}
+
+func Tap(selector string, handler types.DialogHandlerFunc) *Task {
+	f := func(ctx *types.PipelineContext) error {
+		el, err := ctx.P.Element(selector)
+		if err != nil {
+			return err
+		}
+
+		if err = el.Hover(); err != nil {
+			return err
+		}
+
+		if handler != nil {
+			timeout := ctx.P.Timeout(time.Minute)
+			wait, handle := timeout.HandleDialog()
+			go handler(wait, handle)
+		}
+
+		return el.Tap()
 	}
 	task := &Task{op: f}
 	return task
@@ -124,16 +153,16 @@ func (t *Tasks) Custom(c func(p *rod.Page) error) *Tasks {
 }
 
 func Custom(c func(p *rod.Page) error) *Task {
-	f := func(p *rod.Page) error {
-		return c(p)
+	f := func(ctx *types.PipelineContext) error {
+		return c(ctx.P)
 	}
 	task := &Task{op: f}
 	return task
 }
 
 func RemoveClass(selector string, class string) *Task {
-	f := func(p *rod.Page) error {
-		el, err := p.Element(selector)
+	f := func(ctx *types.PipelineContext) error {
+		el, err := ctx.P.Element(selector)
 		if err != nil {
 			return err
 		}
@@ -150,8 +179,8 @@ func RemoveClass(selector string, class string) *Task {
 }
 
 func AddClass(selector string, class string) *Task {
-	f := func(p *rod.Page) error {
-		el, err := p.Element(selector)
+	f := func(ctx *types.PipelineContext) error {
+		el, err := ctx.P.Element(selector)
 		if err != nil {
 			return err
 		}
@@ -174,8 +203,8 @@ func (t *Tasks) Input(selector string, str string) *Tasks {
 }
 
 func Input(selector string, str string) *Task {
-	f := func(p *rod.Page) error {
-		el, err := p.Element(selector)
+	f := func(ctx *types.PipelineContext) error {
+		el, err := ctx.P.Element(selector)
 		if err != nil {
 			return err
 		}
@@ -195,8 +224,8 @@ func Input(selector string, str string) *Task {
 }
 
 func Type(keys ...input.Key) *Task {
-	f := func(p *rod.Page) error {
-		if err := p.Keyboard.Type(keys...); err != nil {
+	f := func(ctx *types.PipelineContext) error {
+		if err := ctx.P.Keyboard.Type(keys...); err != nil {
 			return err
 		}
 
@@ -214,8 +243,8 @@ func (t *Tasks) Reload() *Tasks {
 }
 
 func Reload() *Task {
-	f := func(p *rod.Page) error {
-		return p.Reload()
+	f := func(ctx *types.PipelineContext) error {
+		return ctx.P.Reload()
 	}
 	task := &Task{op: f}
 	return task
@@ -228,7 +257,7 @@ func (t *Tasks) Sleep(dur time.Duration) *Tasks {
 }
 
 func Sleep(dur time.Duration) *Task {
-	f := func(p *rod.Page) error {
+	f := func(ctx *types.PipelineContext) error {
 		time.Sleep(dur)
 		return nil
 	}
@@ -243,11 +272,34 @@ func (t *Tasks) Stop(message string) *Tasks {
 }
 
 func Stop(message string) *Task {
-	f := func(p *rod.Page) error {
+	f := func(ctx *types.PipelineContext) error {
 		return errors.New(message)
 	}
 	task := &Task{op: f}
 	return task
+}
+
+func (t *Tasks) ForEachElement(selector string, ef types.EachElementFunc) *Tasks {
+	t.Append(ForEach(selector, ef))
+	return t
+}
+
+func ForEach(selector string, ef types.EachElementFunc) *Task {
+	f := func(ctx *types.PipelineContext) error {
+		els, err := ctx.P.Elements(selector)
+		if err != nil {
+			return err
+		}
+		for _, el := range els {
+			if stop, errEl := ef(el); errEl != nil {
+				return errEl
+			} else if stop {
+				break
+			}
+		}
+		return nil
+	}
+	return &Task{op: f}
 }
 
 func (t *Tasks) If(op types.ConditionalFunc, trueTasks, falseTasks []types.ITask) *Tasks {

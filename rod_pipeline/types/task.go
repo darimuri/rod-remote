@@ -6,11 +6,12 @@ import (
 )
 
 type ITask interface {
-	Do(p *rod.Page) error
+	Do(c *PipelineContext) error
 }
 
-type OpFunc func(p *rod.Page) error
+type OpFunc func(ctx *PipelineContext) error
 
-type ConditionalFunc func(p *rod.Page) (bool, error)
+type ConditionalFunc func(ctx *PipelineContext) (bool, error)
+type EachElementFunc func(el *rod.Element) (bool, error)
 
 type DialogHandlerFunc func(wait func() *proto.PageJavascriptDialogOpening, handle func(*proto.PageHandleJavaScriptDialog) error)
