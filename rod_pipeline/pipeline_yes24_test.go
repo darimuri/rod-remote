@@ -1,6 +1,7 @@
 package rodpipeline_test
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -43,9 +44,30 @@ var _ = Describe("yes24", func() {
 		})
 
 		FIt("pyongchang", func() {
-			url := "http://m.ticket.yes24.com/Perf/Detail/PerfInfo.aspx?IdPerf=43740"
+			productId := 44002
+			session := "15시 00분"
+			sessionDate := "#\\32 022-11-20"
 
-			var reserved bool
+			url := fmt.Sprintf("http://m.ticket.yes24.com/Perf/Detail/PerfInfo.aspx?IdPerf=%d", productId)
+
+			loginTasks := rp.Tasks(
+				task.Tap("#wingScroll_wrap > div > div.greetingMsg > span.btn > a", nil),
+				task.WaitLoad(),
+				task.WaitIdle(time.Second*60),
+				task.Input("#SMemberID", rp.TestId),
+				task.Input("#SMemberPassword", rp.TestPass),
+				task.Tap("#btn_login", nil),
+			)
+
+			reloadPageTasks := rp.Tasks(
+				task.Reload(),
+				task.WaitLoad(),
+				task.WaitIdle(time.Minute),
+				task.Custom(func(p *rod.Page) error {
+					time.Sleep(time.Second)
+					return nil
+				}),
+			)
 
 			checkTimeFunc := func(el *rod.Element) (bool, error) {
 				a, err := el.Attribute("timeinfo")
@@ -53,12 +75,14 @@ var _ = Describe("yes24", func() {
 					return true, err
 				}
 
-				if a != nil && strings.TrimSpace(*a) == "18시 00분" {
+				if a != nil && strings.TrimSpace(*a) == session {
 					return true, el.Tap()
 				}
 
 				return false, nil
 			}
+
+			var reserved bool
 
 			cut.
 				Open(url).
@@ -67,21 +91,17 @@ var _ = Describe("yes24", func() {
 				Tap("#entWing > span", nil).
 				If(
 					task.ContainsText("#wingScroll_wrap > div > div.greetingMsg > span.btn > a > em", "로그인"),
-					rp.Then(
-						task.Tap("#wingScroll_wrap > div > div.greetingMsg > span.btn > a", nil),
-						task.WaitLoad(),
-						task.WaitIdle(time.Second*60),
-						task.Input("#SMemberID", rp.TestId),
-						task.Input("#SMemberPassword", rp.TestPass),
-						task.Tap("#btn_login", nil),
-					), rp.Else(
-						task.Tap("#entWing > span", nil),
-					),
+					loginTasks, rp.Else(task.Tap("#entWing > span", nil)),
 				).
-				Tap("#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red", nil).
+				While(
+					task.Visible("#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red"),
+					rp.Then(task.Tap("#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red", nil)),
+					reloadPageTasks,
+					10000,
+				).
 				WaitLoad().
 				WaitIdle(time.Minute).
-				Tap("#\\32 022-12-31", nil).
+				Tap(sessionDate, nil).
 				WaitLoad().
 				WaitIdle(time.Minute).
 				ForEachElement("#ulTime > li", checkTimeFunc).
@@ -153,7 +173,7 @@ var _ = Describe("yes24", func() {
 							block := blockAndRow[0]
 							row := strings.ReplaceAll(blockAndRow[1], "열", "")
 
-							if block == "가" {
+							if block != "4" && block != "5" {
 								return true, nil
 							}
 
