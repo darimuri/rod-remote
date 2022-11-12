@@ -111,8 +111,18 @@ var _ = Describe("yes24", func() {
 					},
 					rp.Then(),
 					rp.Else(
-						task.Tap("#StepCtrlStep02_01 > div.guideTitArea > div.btnArea > a", nil),
-						task.Tap("#grade_VIP석", nil),
+						task.If(
+							task.Visible("#StepCtrlStep02_01 > div.guideTitArea > div.btnArea > a"),
+							rp.Then(
+								task.Custom(func(p *rod.Page) error {
+
+									return nil
+								}),
+								task.Tap("#StepCtrlStep02_01 > div.guideTitArea > div.btnArea > a", nil),
+								task.Tap("#grade_VIP석", nil),
+							),
+							rp.Else(),
+						),
 						task.ForEach("#seatSelDlScl > dl > dd:nth-child(2) > ul > li:nth-child(1) > a", func(el *rod.Element) (bool, error) {
 							txt, err := el.Text()
 							if err != nil {
@@ -120,7 +130,7 @@ var _ = Describe("yes24", func() {
 							}
 							s := strings.TrimSpace(txt)
 							if strings.Contains(s, "석") {
-								return true, el.Click(proto.InputMouseButtonLeft, 1)
+								return true, el.Tap()
 							}
 
 							return false, nil
@@ -139,10 +149,41 @@ var _ = Describe("yes24", func() {
 
 							return nil
 						}),
-						task.While(task.Has("#divSeatArray > div"), rp.Then(), rp.Else(task.Custom(func(p *rod.Page) error {
-							time.Sleep(time.Millisecond * 10)
-							return nil
-						})), 1000),
+						task.While(task.Has("#dMapInfo > map > area"),
+							rp.Then(
+								task.ForEach("#dMapInfo > map > area", func(el *rod.Element) (bool, error) {
+									id, err := el.Attribute("id")
+									if err != nil {
+										return false, err
+									} else if id == nil {
+										return false, nil
+									}
+
+									if *id == "area2" {
+										js, errJs := el.Attribute("onclick")
+										if errJs != nil {
+											return false, errJs
+										} else if js == nil {
+											return false, nil
+										}
+										myJs := strings.ReplaceAll(*js, "return false;", "")
+										_, errOnclick := el.Page().Eval(fmt.Sprintf("() => %s", myJs))
+										if errOnclick != nil {
+											return false, errOnclick
+										}
+										return true, nil
+										//return true, el.Tap()
+									}
+
+									return false, nil
+								}),
+							),
+							rp.Else(
+								task.Custom(func(p *rod.Page) error {
+									time.Sleep(time.Millisecond * 10)
+									return nil
+								}),
+							), 1000),
 						task.ForEach("#divSeatArray > div.s9", func(el *rod.Element) (bool, error) {
 							a, err := el.Attribute("title")
 							if err != nil {
