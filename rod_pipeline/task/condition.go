@@ -14,21 +14,21 @@ type IfTask struct {
 	iffalse *Tasks
 }
 
-func (c *IfTask) Do(ctx *types.PipelineContext) error {
-	cond, err := c.op(ctx)
+func (c *IfTask) Do(pc *types.PipelineContext) error {
+	cond, err := c.op(pc)
 	if err != nil {
 		return err
 	}
 
 	if cond {
 		for _, t := range c.iftrue.Tasks {
-			if errT := t.Do(ctx); errT != nil {
+			if errT := t.Do(pc); errT != nil {
 				return errT
 			}
 		}
 	} else {
 		for _, t := range c.iffalse.Tasks {
-			if errT := t.Do(ctx); errT != nil {
+			if errT := t.Do(pc); errT != nil {
 				return errT
 			}
 		}
@@ -46,23 +46,23 @@ type WhileTask struct {
 	maxRetry int
 }
 
-func (c *WhileTask) Do(ctx *types.PipelineContext) error {
+func (c *WhileTask) Do(pc *types.PipelineContext) error {
 	for i := 0; i < c.maxRetry; i++ {
-		cond, err := c.op(ctx)
+		cond, err := c.op(pc)
 		if err != nil {
 			return err
 		}
 
 		if cond {
 			for _, t := range c.iftrue.Tasks {
-				if errT := t.Do(ctx); errT != nil {
+				if errT := t.Do(pc); errT != nil {
 					return errT
 				}
 			}
 			break
 		} else {
 			for _, t := range c.iffalse.Tasks {
-				if errT := t.Do(ctx); errT != nil {
+				if errT := t.Do(pc); errT != nil {
 					return errT
 				}
 			}
@@ -73,8 +73,8 @@ func (c *WhileTask) Do(ctx *types.PipelineContext) error {
 }
 
 func Has(selector string) types.ConditionalFunc {
-	f := func(ctx *types.PipelineContext) (bool, error) {
-		has, _, err := ctx.P.Has(selector)
+	f := func(pc *types.PipelineContext) (bool, error) {
+		has, _, err := pc.Query().Has(selector)
 		if err != nil {
 			return false, err
 		}
@@ -85,8 +85,8 @@ func Has(selector string) types.ConditionalFunc {
 }
 
 func ContainsText(selector, text string) types.ConditionalFunc {
-	f := func(ctx *types.PipelineContext) (bool, error) {
-		has, el, err := ctx.P.Has(selector)
+	f := func(pc *types.PipelineContext) (bool, error) {
+		has, el, err := pc.Query().Has(selector)
 		if err != nil {
 			return false, err
 		}
@@ -106,8 +106,8 @@ func ContainsText(selector, text string) types.ConditionalFunc {
 }
 
 func Visible(selector string) types.ConditionalFunc {
-	f := func(ctx *types.PipelineContext) (bool, error) {
-		has, el, err := ctx.P.Has(selector)
+	f := func(pc *types.PipelineContext) (bool, error) {
+		has, el, err := pc.Query().Has(selector)
 		if err != nil {
 			return false, err
 		}

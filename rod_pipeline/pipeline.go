@@ -8,24 +8,24 @@ import (
 )
 
 type Pipeline struct {
-	c *types.PipelineContext
+	pc *types.PipelineContext
 	*task.Tasks
 }
 
 func (p Pipeline) Run() error {
-	return p.Tasks.Do(p.c)
+	return p.Tasks.Do(p.pc)
 }
 
 func (p Pipeline) PushPage(pg *rod.Page) {
-	p.c.Push(pg)
+	p.pc.Push(pg)
 }
 
 func (p Pipeline) PopPage() error {
-	return p.c.Pop()
+	return p.pc.Pop()
 }
 
 func NewPipeline(p *rod.Page) *Pipeline {
-	return &Pipeline{c: types.NewContext(p), Tasks: &task.Tasks{}}
+	return &Pipeline{pc: types.NewContext(p), Tasks: &task.Tasks{}}
 }
 
 func Tasks(t ...types.ITask) []types.ITask {

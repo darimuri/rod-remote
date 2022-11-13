@@ -104,9 +104,9 @@ var _ = Describe("yes24", func() {
 				Tap(sessionDate, nil).
 				WaitLoad().
 				WaitIdle(time.Minute).
-				ForEachElement("#ulTime > li", checkTimeFunc).
+				ForEach("#ulTime > li", checkTimeFunc).
 				While(
-					func(ctx *types.PipelineContext) (bool, error) {
+					func(pc *types.PipelineContext) (bool, error) {
 						return reserved, nil
 					},
 					rp.Then(),

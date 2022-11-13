@@ -1,20 +1,16 @@
 package types
 
-import (
-	"github.com/go-rod/rod"
-)
+type Stack[T interface{}] []T
 
-type PageStack []*rod.Page
-
-func (s *PageStack) IsEmpty() bool {
+func (s *Stack[T]) IsEmpty() bool {
 	return len(*s) == 0
 }
 
-func (s *PageStack) Push(p *rod.Page) {
+func (s *Stack[T]) Push(p T) {
 	*s = append(*s, p)
 }
 
-func (s *PageStack) Pop() (*rod.Page, bool) {
+func (s *Stack[T]) Pop() (T, bool) {
 	if s.IsEmpty() {
 		return nil, false
 	} else {
@@ -23,4 +19,8 @@ func (s *PageStack) Pop() (*rod.Page, bool) {
 		*s = (*s)[:index]      // Remove it from the stack by slicing it off.
 		return element, true
 	}
+}
+
+func (s *Stack[T]) Last() T {
+	return (*s)[len(*s)-1]
 }
