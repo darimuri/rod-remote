@@ -184,7 +184,7 @@ var _ = Describe("yes24", func() {
 									return nil
 								}),
 							), 1000),
-						task.ForEach("#divSeatArray > div.s9", func(el *rod.Element) (bool, error) {
+						task.ForEach("#divSeatArray > div.s8", func(el *rod.Element) (bool, error) {
 							a, err := el.Attribute("title")
 							if err != nil {
 								return true, err
@@ -200,6 +200,11 @@ var _ = Describe("yes24", func() {
 							floor := frc[0]
 							br := frc[1]
 							col := strings.ReplaceAll(frc[2], "번", "")
+
+							_, err = el.Eval("() => ClickSeat(this)")
+							if err != nil {
+								return false, nil
+							}
 
 							if floor != "1층" {
 								//TODO: go back to area selector
