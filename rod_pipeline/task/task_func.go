@@ -3,6 +3,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -192,7 +193,7 @@ func ForEach(selector string, ef types.EachElementFunc) *Task {
 			return err
 		}
 		for _, el := range els {
-			if stop, errEl := ef(el); errEl != nil {
+			if stop, errEl := ef(pc, el); errEl != nil {
 				return errEl
 			} else if stop {
 				break
@@ -201,4 +202,52 @@ func ForEach(selector string, ef types.EachElementFunc) *Task {
 		return nil
 	}
 	return &Task{op: f}
+}
+
+func Has(selector string) types.ConditionalFunc {
+	f := func(pc *types.PipelineContext) (bool, error) {
+		has, _, err := pc.Query().Has(selector)
+		if err != nil {
+			return false, err
+		}
+
+		return has, nil
+	}
+	return f
+}
+
+func ContainsText(selector, text string) types.ConditionalFunc {
+	f := func(pc *types.PipelineContext) (bool, error) {
+		has, el, err := pc.Query().Has(selector)
+		if err != nil {
+			return false, err
+		}
+		if false == has {
+			return has, nil
+		}
+
+		s, errText := el.Text()
+		if errText != nil {
+			return false, errText
+		}
+
+		return strings.Contains(strings.TrimSpace(s), text), nil
+	}
+
+	return f
+}
+
+func Visible(selector string) types.ConditionalFunc {
+	f := func(pc *types.PipelineContext) (bool, error) {
+		has, el, err := pc.Query().Has(selector)
+		if err != nil {
+			return false, err
+		}
+		if !has {
+			return false, nil
+		}
+
+		return el.Visible()
+	}
+	return f
 }

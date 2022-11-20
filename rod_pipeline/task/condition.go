@@ -1,7 +1,7 @@
 package task
 
 import (
-	"strings"
+	"errors"
 
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
 )
@@ -55,15 +55,15 @@ func (c *WhileTask) Do(pc *types.PipelineContext) error {
 
 		if cond {
 			for _, t := range c.iftrue.Tasks {
-				if errT := t.Do(pc); errT != nil {
-					return errT
+				if err = t.Do(pc); err != nil {
+					return err
 				}
 			}
 			break
 		} else {
 			for _, t := range c.iffalse.Tasks {
-				if errT := t.Do(pc); errT != nil {
-					return errT
+				if err = t.Do(pc); err != nil {
+					return err
 				}
 			}
 		}
@@ -72,52 +72,38 @@ func (c *WhileTask) Do(pc *types.PipelineContext) error {
 	return nil
 }
 
-func Has(selector string) types.ConditionalFunc {
-	f := func(pc *types.PipelineContext) (bool, error) {
-		has, _, err := pc.Query().Has(selector)
-		if err != nil {
-			return false, err
-		}
+var _ types.ITask = (*ForEachElementTask)(nil)
 
-		return has, nil
-	}
-	return f
+type ForEachElementTask struct {
+	selector string
+	each     *Tasks
 }
 
-func ContainsText(selector, text string) types.ConditionalFunc {
-	f := func(pc *types.PipelineContext) (bool, error) {
-		has, el, err := pc.Query().Has(selector)
-		if err != nil {
-			return false, err
-		}
-		if false == has {
-			return has, nil
-		}
-
-		s, errText := el.Text()
-		if errText != nil {
-			return false, errText
-		}
-
-		return strings.Contains(strings.TrimSpace(s), text), nil
+func (c *ForEachElementTask) Do(pc *types.PipelineContext) error {
+	if !pc.ElementStackEmpty() {
+		return errors.New("element stack is not empty")
 	}
 
-	return f
-}
-
-func Visible(selector string) types.ConditionalFunc {
-	f := func(pc *types.PipelineContext) (bool, error) {
-		has, el, err := pc.Query().Has(selector)
-		if err != nil {
-			return false, err
-		}
-		if !has {
-			return false, nil
-		}
-
-		return el.Visible()
+	elements, err := pc.Query().Elements(c.selector)
+	if err != nil {
+		return err
 	}
-	return f
+
+	for _, e := range elements {
+		pc.PushElement(e)
+
+		for _, t := range c.each.Tasks {
+			if err = t.Do(pc); err != nil {
+				return err
+			}
+		}
+
+		if err = pc.PopElement(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func If(op types.ConditionalFunc, trueTasks []types.ITask, falseTasks []types.ITask) *IfTask {
@@ -133,4 +119,9 @@ func While(op types.ConditionalFunc, trueTasks []types.ITask, falseTasks []types
 
 	conditional := &WhileTask{op: op, iftrue: iftrue, iffalse: iffalse, maxRetry: maxRetry}
 	return conditional
+}
+
+func ForEachElement(selector string, tasks []types.ITask) *ForEachElementTask {
+	each := NewTasks(tasks...)
+	return &ForEachElementTask{selector: selector, each: each}
 }

@@ -11,13 +11,14 @@ func (s *Stack[T]) Push(p T) {
 }
 
 func (s *Stack[T]) Pop() (T, bool) {
+	var e T
 	if s.IsEmpty() {
-		return nil, false
+		return e, false
 	} else {
-		index := len(*s) - 1   // Get the index of the top most element.
-		element := (*s)[index] // Index into the slice and obtain the element.
-		*s = (*s)[:index]      // Remove it from the stack by slicing it off.
-		return element, true
+		index := len(*s) - 1 // Get the index of the top most element.
+		e := (*s)[index]     // Index into the slice and obtain the element.
+		*s = (*s)[:index]    // Remove it from the stack by slicing it off.
+		return e, true
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	rp "github.com/darimuri/rod-remote/rod_pipeline"
 	"github.com/darimuri/rod-remote/rod_pipeline/task"
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
+	"github.com/darimuri/rod-remote/rod_pipeline/userod"
 )
 
 var _ = Describe("yes24", func() {
@@ -44,9 +45,9 @@ var _ = Describe("yes24", func() {
 		})
 
 		FIt("pyongchang", func() {
-			productId := 44002
-			session := "15시 00분"
-			sessionDate := "#\\32 022-11-20"
+			productId := 44166
+			session := "18시 00분"
+			sessionDate := "#\\32 023-02-04"
 
 			url := fmt.Sprintf("http://m.ticket.yes24.com/Perf/Detail/PerfInfo.aspx?IdPerf=%d", productId)
 
@@ -69,7 +70,7 @@ var _ = Describe("yes24", func() {
 				}),
 			)
 
-			checkTimeFunc := func(el *rod.Element) (bool, error) {
+			checkTimeFunc := func(_ *types.PipelineContext, el *rod.Element) (bool, error) {
 				a, err := el.Attribute("timeinfo")
 				if err != nil {
 					return true, err
@@ -84,6 +85,9 @@ var _ = Describe("yes24", func() {
 
 			var reserved bool
 
+			reserveButtonSelector := "#gd_norInfo > div.gd_btn > ul > li:nth-child(1) > a"
+			//reserveButtonSelector := "#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red"
+
 			cut.
 				Open(url).
 				WaitLoad().
@@ -94,8 +98,8 @@ var _ = Describe("yes24", func() {
 					loginTasks, rp.Else(task.Tap("#entWing > span", nil)),
 				).
 				While(
-					task.Visible("#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red"),
-					rp.Then(task.Tap("#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red", nil)),
+					task.Visible(reserveButtonSelector),
+					rp.Then(task.Tap(reserveButtonSelector, nil)),
 					reloadPageTasks,
 					10000,
 				).
@@ -123,7 +127,7 @@ var _ = Describe("yes24", func() {
 							),
 							rp.Else(),
 						),
-						task.ForEach("#seatSelDlScl > dl > dd:nth-child(2) > ul > li:nth-child(1) > a", func(el *rod.Element) (bool, error) {
+						task.ForEach("#seatSelDlScl > dl > dd:nth-child(2) > ul > li:nth-child(1) > a", func(_ *types.PipelineContext, el *rod.Element) (bool, error) {
 							txt, err := el.Text()
 							if err != nil {
 								return true, err
@@ -151,7 +155,7 @@ var _ = Describe("yes24", func() {
 						}),
 						task.While(task.Has("#dMapInfo > map > area"),
 							rp.Then(
-								task.ForEach("#dMapInfo > map > area", func(el *rod.Element) (bool, error) {
+								task.ForEach("#dMapInfo > map > area", func(pc *types.PipelineContext, el *rod.Element) (bool, error) {
 									id, err := el.Attribute("id")
 									if err != nil {
 										return false, err
@@ -159,19 +163,11 @@ var _ = Describe("yes24", func() {
 										return false, nil
 									}
 
+									//https://stackoverflow.com/questions/4529957/get-position-of-map-areahtml
+									//get position of image and coords of area, then move mouse to the center of area
+
 									if *id == "area2" {
-										js, errJs := el.Attribute("onclick")
-										if errJs != nil {
-											return false, errJs
-										} else if js == nil {
-											return false, nil
-										}
-										myJs := strings.ReplaceAll(*js, "return false;", "")
-										_, errOnclick := el.Page().Eval(fmt.Sprintf("() => %s", myJs))
-										if errOnclick != nil {
-											return false, errOnclick
-										}
-										return true, nil
+										return userod.EvalEventScript(el, "onclick")
 										//return true, el.Tap()
 									}
 
@@ -184,7 +180,7 @@ var _ = Describe("yes24", func() {
 									return nil
 								}),
 							), 1000),
-						task.ForEach("#divSeatArray > div.s8", func(el *rod.Element) (bool, error) {
+						task.ForEach("#divSeatArray > div.s8", func(_ *types.PipelineContext, el *rod.Element) (bool, error) {
 							a, err := el.Attribute("title")
 							if err != nil {
 								return true, err
@@ -247,7 +243,7 @@ var _ = Describe("yes24", func() {
 							return true, nil
 						}),
 						task.Custom(func(p *rod.Page) error {
-							return nil
+							return cut.PopPage()
 						}),
 					),
 					10000,

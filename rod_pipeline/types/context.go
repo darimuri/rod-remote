@@ -14,12 +14,12 @@ type PipelineContext struct {
 	elementStack Stack[*rod.Element]
 }
 
-func (c *PipelineContext) Push(pg *rod.Page) {
+func (c *PipelineContext) PushPage(pg *rod.Page) {
 	c.pageStack.Push(c.p)
 	c.p = pg
 }
 
-func (c *PipelineContext) Pop() error {
+func (c *PipelineContext) PopPage() error {
 	pp, ok := c.pageStack.Pop()
 	if ok {
 		c.p = pp
@@ -39,6 +39,23 @@ func (c *PipelineContext) Query() userod.Query {
 		return userod.NewQuery(c.p, nil)
 	}
 	return userod.NewQuery(c.p, c.elementStack.Last())
+}
+
+func (c *PipelineContext) ElementStackEmpty() bool {
+	return len(c.elementStack) == 0
+}
+
+func (c *PipelineContext) PushElement(e *rod.Element) {
+	c.elementStack.Push(e)
+}
+
+func (c *PipelineContext) PopElement() error {
+	_, ok := c.elementStack.Pop()
+	if !ok {
+		return errors.New("element stack is empty")
+	}
+
+	return nil
 }
 
 func NewContext(p *rod.Page) *PipelineContext {

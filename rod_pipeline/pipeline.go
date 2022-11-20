@@ -17,11 +17,11 @@ func (p Pipeline) Run() error {
 }
 
 func (p Pipeline) PushPage(pg *rod.Page) {
-	p.pc.Push(pg)
+	p.pc.PushPage(pg)
 }
 
 func (p Pipeline) PopPage() error {
-	return p.pc.Pop()
+	return p.pc.PopPage()
 }
 
 func NewPipeline(p *rod.Page) *Pipeline {
