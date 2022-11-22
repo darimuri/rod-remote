@@ -64,7 +64,7 @@ var _ = Describe("yes24", func() {
 				task.Reload(),
 				task.WaitLoad(),
 				task.WaitIdle(time.Minute),
-				task.Custom(func(p *rod.Page) error {
+				task.Custom(func(pc *types.PipelineContext) error {
 					time.Sleep(time.Second)
 					return nil
 				}),
@@ -118,7 +118,7 @@ var _ = Describe("yes24", func() {
 						task.If(
 							task.Visible("#StepCtrlStep02_01 > div.guideTitArea > div.btnArea > a"),
 							rp.Then(
-								task.Custom(func(p *rod.Page) error {
+								task.Custom(func(pc *types.PipelineContext) error {
 
 									return nil
 								}),
@@ -139,8 +139,8 @@ var _ = Describe("yes24", func() {
 
 							return false, nil
 						}),
-						task.Custom(func(p *rod.Page) error {
-							el, err := p.Element("#ifrmSeatFrame")
+						task.Custom(func(pc *types.PipelineContext) error {
+							el, err := pc.Page().Element("#ifrmSeatFrame")
 							if err != nil {
 								return err
 							}
@@ -149,7 +149,7 @@ var _ = Describe("yes24", func() {
 								return errFrame
 							}
 
-							cut.PushPage(pg)
+							pc.PushPage(pg)
 
 							return nil
 						}),
@@ -163,19 +163,32 @@ var _ = Describe("yes24", func() {
 										return false, nil
 									}
 
+									img, err := pc.Page().Element("#blockFile")
+									if err != nil {
+										return true, err
+									}
+									center, err := userod.GetImageAreaCentroid(img, el)
+									if err != nil {
+										return true, err
+									}
+
+									errMoveTo := pc.Page().Mouse.MoveTo(*center)
+									if errMoveTo != nil {
+										return true, errMoveTo
+									}
+
 									//https://stackoverflow.com/questions/4529957/get-position-of-map-areahtml
 									//get position of image and coords of area, then move mouse to the center of area
 
-									if *id == "area2" {
-										return userod.EvalEventScript(el, "onclick")
-										//return true, el.Tap()
-									}
+									//if *id == "area2" {
+									//	return userod.EvalEventScript(el, "onclick")
+									//}
 
 									return false, nil
 								}),
 							),
 							rp.Else(
-								task.Custom(func(p *rod.Page) error {
+								task.Custom(func(pc *types.PipelineContext) error {
 									time.Sleep(time.Millisecond * 10)
 									return nil
 								}),
@@ -242,8 +255,8 @@ var _ = Describe("yes24", func() {
 
 							return true, nil
 						}),
-						task.Custom(func(p *rod.Page) error {
-							return cut.PopPage()
+						task.Custom(func(pc *types.PipelineContext) error {
+							return pc.PopPage()
 						}),
 					),
 					10000,

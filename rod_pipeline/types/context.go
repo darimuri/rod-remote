@@ -12,6 +12,7 @@ type PipelineContext struct {
 	p            *rod.Page
 	pageStack    Stack[*rod.Page]
 	elementStack Stack[*rod.Element]
+	m            map[string]interface{}
 }
 
 func (c *PipelineContext) PushPage(pg *rod.Page) {
@@ -58,10 +59,19 @@ func (c *PipelineContext) PopElement() error {
 	return nil
 }
 
+func (c *PipelineContext) Set(k string, v interface{}) {
+	c.m[k] = v
+}
+
+func (c *PipelineContext) Get(k string) interface{} {
+	return c.m[k]
+}
+
 func NewContext(p *rod.Page) *PipelineContext {
 	return &PipelineContext{
 		p:            p,
 		pageStack:    Stack[*rod.Page]{},
 		elementStack: Stack[*rod.Element]{},
+		m:            make(map[string]interface{}, 0),
 	}
 }

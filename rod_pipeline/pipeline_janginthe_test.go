@@ -145,7 +145,7 @@ func testCut(cut *rp.Pipeline, logoutCondition types.ConditionalFunc, loginAllTa
 		Input("#quantity", "1").
 		While(task.Visible("#frm_order_act"), rp.Then(), rp.Else(
 			task.Click("div.ec-base-button > a.first", purchaseClickHandler),
-			task.Custom(func(p *rod.Page) error {
+			task.Custom(func(pc *types.PipelineContext) error {
 				//time.Sleep(time.Millisecond * 100)
 				return nil
 			}),

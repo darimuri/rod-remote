@@ -3,8 +3,6 @@ package task
 import (
 	"time"
 
-	"github.com/go-rod/rod"
-
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
 )
 
@@ -96,7 +94,7 @@ func (t *Tasks) Stop(message string) *Tasks {
 	return t
 }
 
-func (t *Tasks) Custom(c func(p *rod.Page) error) *Tasks {
+func (t *Tasks) Custom(c func(pc *types.PipelineContext) error) *Tasks {
 	t.Append(Custom(c))
 
 	return t

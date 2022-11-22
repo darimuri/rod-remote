@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"
 
@@ -178,9 +177,9 @@ func Stop(message string) *Task {
 	return task
 }
 
-func Custom(c func(p *rod.Page) error) *Task {
+func Custom(c func(pc *types.PipelineContext) error) *Task {
 	f := func(pc *types.PipelineContext) error {
-		return c(pc.Page())
+		return c(pc)
 	}
 	task := &Task{op: f}
 	return task
