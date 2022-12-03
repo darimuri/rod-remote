@@ -215,6 +215,14 @@ func Has(selector string) types.ConditionalFunc {
 	return f
 }
 
+func IsTrue(b bool) types.ConditionalFunc {
+	f := func(pc *types.PipelineContext) (bool, error) {
+		return b, nil
+	}
+
+	return f
+}
+
 func ContainsText(selector, text string) types.ConditionalFunc {
 	f := func(pc *types.PipelineContext) (bool, error) {
 		has, el, err := pc.Query().Has(selector)

@@ -2,6 +2,7 @@ package task
 
 import (
 	"errors"
+	"time"
 
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
 )
@@ -119,6 +120,17 @@ func While(op types.ConditionalFunc, trueTasks []types.ITask, falseTasks []types
 
 	conditional := &WhileTask{op: op, iftrue: iftrue, iffalse: iffalse, maxRetry: maxRetry}
 	return conditional
+}
+
+func WaitUntilHas(selector string, maxRetry int, delay time.Duration) *WhileTask {
+	op := func(pc *types.PipelineContext) (bool, error) {
+		has, _, err := pc.Query().Has(selector)
+		return has, err
+	}
+	iftrue := NewTasks()
+	iffalse := NewTasks(Sleep(delay))
+
+	return &WhileTask{op: op, iftrue: iftrue, iffalse: iffalse, maxRetry: maxRetry}
 }
 
 func ForEachElement(selector string, tasks []types.ITask) *ForEachElementTask {

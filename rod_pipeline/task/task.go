@@ -116,3 +116,10 @@ func (t *Tasks) While(op types.ConditionalFunc, trueTasks, falseTasks []types.IT
 	t.Append(conditional)
 	return t
 }
+
+func (t *Tasks) WaitUntilHas(selector string, maxRetry int, delay time.Duration) *Tasks {
+	conditional := WaitUntilHas(selector, maxRetry, delay)
+
+	t.Append(conditional)
+	return t
+}

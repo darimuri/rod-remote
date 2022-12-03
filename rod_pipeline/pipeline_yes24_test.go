@@ -45,9 +45,9 @@ var _ = Describe("yes24", func() {
 		})
 
 		FIt("pyongchang", func() {
-			productId := 44166
+			productId := 44176
 			session := "18시 00분"
-			sessionDate := "#\\32 023-02-04"
+			sessionDate := "2023-01-14"
 
 			url := fmt.Sprintf("http://m.ticket.yes24.com/Perf/Detail/PerfInfo.aspx?IdPerf=%d", productId)
 
@@ -70,19 +70,7 @@ var _ = Describe("yes24", func() {
 				}),
 			)
 
-			checkTimeFunc := func(_ *types.PipelineContext, el *rod.Element) (bool, error) {
-				a, err := el.Attribute("timeinfo")
-				if err != nil {
-					return true, err
-				}
-
-				if a != nil && strings.TrimSpace(*a) == session {
-					return true, el.Tap()
-				}
-
-				return false, nil
-			}
-
+			var sessionSelected bool
 			var reserved bool
 
 			reserveButtonSelector := "#gd_norInfo > div.gd_btn > ul > li:nth-child(1) > a"
@@ -105,14 +93,57 @@ var _ = Describe("yes24", func() {
 				).
 				WaitLoad().
 				WaitIdle(time.Minute).
-				Tap(sessionDate, nil).
+				WaitUntilHas("#calendar > div.calendar > ul > li.tp_dayN.tickP", 1000, time.Millisecond*10).
+				While(
+					task.IsTrue(!sessionSelected),
+					rp.Then(
+						task.ForEachElement("#calendar > div.calendar > ul > li.tp_dayN.tickP", rp.Tasks(
+							task.Custom(func(pc *types.PipelineContext) error {
+								a, err := pc.Query().Element("a")
+								if err != nil {
+									return nil
+								}
+								id, errId := a.Attribute("id")
+								if errId != nil {
+									return nil
+								}
+								title, errTitle := a.Attribute("title")
+								if errTitle != nil {
+									return nil
+								}
+
+								if *id == sessionDate {
+									sessionSelected = true
+								} else if *title == sessionDate {
+									sessionSelected = true
+								}
+
+								if sessionSelected {
+									return a.Tap()
+								}
+
+								return nil
+							}),
+						)),
+					), rp.Else(), 100).
 				WaitLoad().
 				WaitIdle(time.Minute).
-				ForEach("#ulTime > li", checkTimeFunc).
+				WaitUntilHas("#ulTime > li", 1000, time.Millisecond*10).
+				ForEach("#ulTime > li", func(_ *types.PipelineContext, el *rod.Element) (bool, error) {
+					a, err := el.Attribute("timeinfo")
+					if err != nil {
+						return true, err
+					}
+
+					timeInto := strings.TrimSpace(*a)
+					if a != nil && timeInto == session {
+						return true, el.Tap()
+					}
+
+					return false, nil
+				}).
 				While(
-					func(pc *types.PipelineContext) (bool, error) {
-						return reserved, nil
-					},
+					task.IsTrue(reserved),
 					rp.Then(),
 					rp.Else(
 						task.If(
