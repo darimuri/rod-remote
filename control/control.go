@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/devices"
 )
 
 func NewControl(b *rod.Browser) Control {
@@ -48,25 +49,21 @@ func (c Control) OpenPage(url string, reuse bool) (*PageControl, error) {
 		return nil, err
 	}
 
-	return &PageControl{p: page}, nil
+	return &PageControl{Page: page}, nil
+}
+
+func (c Control) DefaultDevice(device devices.Device) {
+	c.b.DefaultDevice(device)
 }
 
 type PageControl struct {
-	p *rod.Page
-}
-
-func (c PageControl) Close() error {
-	if c.p != nil {
-		return c.p.Close()
-	}
-
-	return nil
+	*rod.Page
 }
 
 func (c PageControl) GetAttributesFrom(selector string, attribute string) ([]string, error) {
 	var attributes []string
 	err := rod.Try(func() {
-		els := c.p.MustElements(selector)
+		els := c.MustElements(selector)
 		attributes = make([]string, 0)
 
 		for _, el := range els {

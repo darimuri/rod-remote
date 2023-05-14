@@ -1,14 +1,14 @@
 SHELL := /bin/bash
 
 clean-launcher:
-	rm -f launcher
+	rm -f launcher.bin
 
 build-launcher: clean-launcher
-	CGO_ENABLED=0 go build -o launcher ./cmd/launcher/main.go
+	CGO_ENABLED=0 go build -o launcher.bin ./cmd/launcher/main.go
 
 run-launcher: build-launcher
 	mkdir -p `pwd`/.rod-remote-launcher
-	LAUNCHER_DATA_DIR=`pwd`/.rod-remote-launcher LAUNCHER_NO_HEADLESS=true ./launcher
+	LAUNCHER_DATA_DIR=`pwd`/.rod-remote-launcher.bin LAUNCHER_NO_HEADLESS=true ./launcher.bin
 
 build-image-launcher:
 	docker build -t rod-remote-launcher:`git log -1 --pretty=%h` -f docker/Dockerfile.launcher ./

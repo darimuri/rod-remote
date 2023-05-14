@@ -1,6 +1,6 @@
 module github.com/darimuri/rod-remote
 
-go 1.18
+go 1.19
 
 require (
 	github.com/ctessum/geom v0.2.11

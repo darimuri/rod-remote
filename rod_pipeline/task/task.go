@@ -1,6 +1,7 @@
 package task
 
 import (
+	"log"
 	"time"
 
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
@@ -9,11 +10,16 @@ import (
 var _ types.ITask = (*Task)(nil)
 
 type Task struct {
-	op types.OpFunc
+	op   types.OpFunc
+	desc string
 }
 
 func (t *Task) Do(pc *types.PipelineContext) error {
 	return t.op(pc)
+}
+
+func (t *Task) Desc() string {
+	return t.desc
 }
 
 type Tasks struct {
@@ -21,17 +27,20 @@ type Tasks struct {
 }
 
 func NewTasks(task ...types.ITask) *Tasks {
-	t := &Tasks{}
-	t.Append(task...)
-	return t
+	tasks := &Tasks{Tasks: make([]types.ITask, 0)}
+	for _, t := range task {
+		tasks.Tasks = append(tasks.Tasks, t)
+	}
+	return tasks
 }
 
-func (t *Tasks) Append(task ...types.ITask) {
-	t.Tasks = append(t.Tasks, task...)
+func (t *Tasks) Append(task types.ITask) {
+	t.Tasks = append(t.Tasks, task)
 }
 
 func (t *Tasks) Do(pc *types.PipelineContext) error {
 	for _, task := range t.Tasks {
+		log.Println(">>", task.Desc())
 		if err := task.Do(pc); err != nil {
 			return err
 		}
@@ -46,14 +55,8 @@ func (t *Tasks) Open(url string) *Tasks {
 	return t
 }
 
-func (t *Tasks) WaitLoad() *Tasks {
-	t.Append(WaitLoad())
-
-	return t
-}
-
-func (t *Tasks) WaitIdle(dur time.Duration) *Tasks {
-	t.Append(WaitIdle(dur))
+func (t *Tasks) WaitRequestIdle(timeout time.Duration) *Tasks {
+	t.Append(WaitRequestIdle(timeout))
 
 	return t
 }
@@ -105,20 +108,18 @@ func (t *Tasks) ForEach(selector string, ef types.EachElementFunc) *Tasks {
 	return t
 }
 
-func (t *Tasks) If(op types.ConditionalFunc, trueTasks, falseTasks []types.ITask) *Tasks {
+func (t *Tasks) If(op types.ConditionalTask, trueTasks, falseTasks []types.ITask) *Tasks {
 	t.Append(If(op, trueTasks, falseTasks))
 	return t
 }
 
-func (t *Tasks) While(op types.ConditionalFunc, trueTasks, falseTasks []types.ITask, maxRetry int) *Tasks {
-	conditional := While(op, trueTasks, falseTasks, maxRetry)
-
-	t.Append(conditional)
+func (t *Tasks) While(op types.ConditionalTask, trueTasks, falseTasks []types.ITask, maxRetry int) *Tasks {
+	t.Append(While(op, trueTasks, falseTasks, maxRetry))
 	return t
 }
 
-func (t *Tasks) WaitUntilHas(selector string, maxRetry int, delay time.Duration) *Tasks {
-	conditional := WaitUntilHas(selector, maxRetry, delay)
+func (t *Tasks) WhileUntilHas(selector string, maxRetry int, delay time.Duration) *Tasks {
+	conditional := WhileUntilHas(selector, maxRetry, delay)
 
 	t.Append(conditional)
 	return t

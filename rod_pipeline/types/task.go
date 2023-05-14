@@ -7,6 +7,28 @@ import (
 
 type ITask interface {
 	Do(pc *PipelineContext) error
+	Desc() string
+}
+
+type ConditionalTask struct {
+	f    ConditionalFunc
+	desc string
+}
+
+func (t *ConditionalTask) Do(pc *PipelineContext) (bool, error) {
+	return t.f(pc)
+}
+
+func (t *ConditionalTask) Desc() string {
+	return t.desc
+}
+
+func (t *ConditionalTask) DoReference() interface{} {
+	return t.f
+}
+
+func NewConditionalTask(f ConditionalFunc, desc string) ConditionalTask {
+	return ConditionalTask{f: f, desc: desc}
 }
 
 type OpFunc func(pc *PipelineContext) error

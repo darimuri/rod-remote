@@ -63,7 +63,7 @@ var _ = Describe("janginthe.com purchase", Ordered, func() {
 	var loginFormTasks []types.ITask
 	var loginAllTasks []types.ITask
 
-	var logoutCondition types.ConditionalFunc
+	var logoutCondition types.ConditionalTask
 
 	BeforeEach(func() {
 		b = rod.New().ControlURL(rp.ControlUrl)
@@ -82,14 +82,12 @@ var _ = Describe("janginthe.com purchase", Ordered, func() {
 			task.Input("#member_id", rp.TestId),
 			task.Input("#member_passwd", rp.TestPass),
 			task.Click("div.login > fieldset > a.btn_login", nil),
-			task.WaitLoad(),
-			task.WaitIdle(time.Minute),
+			task.WaitRequestIdle(time.Second*10),
 		)
 
 		loginAllTasks = rp.Tasks(
 			task.Click("#header > div.inner > div > div > ul.xans-element-.xans-layout.xans-layout-statelogoff.right.off > li:nth-child(1) > a", nil),
-			task.WaitLoad(),
-			task.WaitIdle(time.Minute),
+			task.WaitRequestIdle(time.Second*10),
 		)
 		loginAllTasks = append(loginAllTasks, loginFormTasks...)
 
@@ -127,11 +125,9 @@ var _ = Describe("janginthe.com purchase", Ordered, func() {
 	})
 })
 
-func testCut(cut *rp.Pipeline, logoutCondition types.ConditionalFunc, loginAllTasks, loginFormTasks, purchaseTasks []types.ITask) {
+func testCut(cut *rp.Pipeline, logoutCondition types.ConditionalTask, loginAllTasks, loginFormTasks, purchaseTasks []types.ITask) {
 	cut.
 		Open(productUrl).
-		WaitLoad().
-		WaitIdle(time.Minute).
 		If(
 			logoutCondition,
 			loginAllTasks,
@@ -149,8 +145,7 @@ func testCut(cut *rp.Pipeline, logoutCondition types.ConditionalFunc, loginAllTa
 				//time.Sleep(time.Millisecond * 100)
 				return nil
 			}),
-			task.WaitLoad(),
-			task.WaitIdle(time.Minute),
+			task.WaitRequestIdle(time.Minute),
 			task.If(logoutCondition, loginFormTasks, rp.Else()),
 		), 1000000).
 		If(

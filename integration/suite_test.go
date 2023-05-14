@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/darimuri/rod-remote/pkg/apis/control"
+	"github.com/darimuri/rod-remote/control"
 )
 
 func TestSuite(t *testing.T) {
@@ -58,7 +58,7 @@ var _ = Describe("nainom naver news profile reporter", Ordered, func() {
 			p.MustClose()
 		}
 
-		cut = control.Control{Browser: browser}
+		cut = control.NewControl(browser)
 		cut.DefaultDevice(testDevice.Landescape())
 	})
 

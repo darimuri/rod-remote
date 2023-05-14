@@ -2,33 +2,40 @@ package task
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
+	"github.com/darimuri/rod-remote/rod_pipeline/util"
 )
 
 var _ types.ITask = (*IfTask)(nil)
 
 type IfTask struct {
-	op      types.ConditionalFunc
-	iftrue  *Tasks
-	iffalse *Tasks
+	op         types.ConditionalFunc
+	trueTasks  *Tasks
+	falseTasks *Tasks
+	desc       string
 }
 
 func (c *IfTask) Do(pc *types.PipelineContext) error {
 	cond, err := c.op(pc)
+
 	if err != nil {
 		return err
 	}
 
 	if cond {
-		for _, t := range c.iftrue.Tasks {
+		for _, t := range c.trueTasks.Tasks {
+			log.Printf(">>> %s", t.Desc())
 			if errT := t.Do(pc); errT != nil {
 				return errT
 			}
 		}
 	} else {
-		for _, t := range c.iffalse.Tasks {
+		for _, t := range c.falseTasks.Tasks {
+			log.Printf(">>> %s", t.Desc())
 			if errT := t.Do(pc); errT != nil {
 				return errT
 			}
@@ -38,13 +45,18 @@ func (c *IfTask) Do(pc *types.PipelineContext) error {
 	return nil
 }
 
+func (c *IfTask) Desc() string {
+	return c.desc
+}
+
 var _ types.ITask = (*WhileTask)(nil)
 
 type WhileTask struct {
-	op       types.ConditionalFunc
-	iftrue   *Tasks
-	iffalse  *Tasks
-	maxRetry int
+	op         types.ConditionalFunc
+	trueTasks  *Tasks
+	falseTasks *Tasks
+	maxRetry   int
+	desc       string
 }
 
 func (c *WhileTask) Do(pc *types.PipelineContext) error {
@@ -55,14 +67,18 @@ func (c *WhileTask) Do(pc *types.PipelineContext) error {
 		}
 
 		if cond {
-			for _, t := range c.iftrue.Tasks {
+			log.Printf(">>> do truetasks for condition is %v (%d/%d)", cond, i, c.maxRetry)
+			for _, t := range c.trueTasks.Tasks {
+				log.Printf(">>>> %s", t.Desc())
 				if err = t.Do(pc); err != nil {
 					return err
 				}
 			}
 			break
 		} else {
-			for _, t := range c.iffalse.Tasks {
+			log.Printf(">>> do falsetasks for condition is %v (%d/%d)", cond, i, c.maxRetry)
+			for _, t := range c.falseTasks.Tasks {
+				log.Printf(">>>> %s", t.Desc())
 				if err = t.Do(pc); err != nil {
 					return err
 				}
@@ -73,11 +89,16 @@ func (c *WhileTask) Do(pc *types.PipelineContext) error {
 	return nil
 }
 
+func (c *WhileTask) Desc() string {
+	return c.desc
+}
+
 var _ types.ITask = (*ForEachElementTask)(nil)
 
 type ForEachElementTask struct {
 	selector string
-	each     *Tasks
+	tasks    *Tasks
+	desc     string
 }
 
 func (c *ForEachElementTask) Do(pc *types.PipelineContext) error {
@@ -93,7 +114,7 @@ func (c *ForEachElementTask) Do(pc *types.PipelineContext) error {
 	for _, e := range elements {
 		pc.PushElement(e)
 
-		for _, t := range c.each.Tasks {
+		for _, t := range c.tasks.Tasks {
 			if err = t.Do(pc); err != nil {
 				return err
 			}
@@ -107,22 +128,30 @@ func (c *ForEachElementTask) Do(pc *types.PipelineContext) error {
 	return nil
 }
 
-func If(op types.ConditionalFunc, trueTasks []types.ITask, falseTasks []types.ITask) *IfTask {
-	iftrue := NewTasks(trueTasks...)
-	iffalse := NewTasks(falseTasks...)
-
-	return &IfTask{op: op, iftrue: iftrue, iffalse: iffalse}
+func (c *ForEachElementTask) Desc() string {
+	return c.desc
 }
 
-func While(op types.ConditionalFunc, trueTasks []types.ITask, falseTasks []types.ITask, maxRetry int) *WhileTask {
-	iftrue := NewTasks(trueTasks...)
-	iffalse := NewTasks(falseTasks...)
-
-	conditional := &WhileTask{op: op, iftrue: iftrue, iffalse: iffalse, maxRetry: maxRetry}
-	return conditional
+func If(op types.ConditionalTask, trueTasks []types.ITask, falseTasks []types.ITask) *IfTask {
+	return &IfTask{
+		op:         op.Do,
+		trueTasks:  NewTasks(trueTasks...),
+		falseTasks: NewTasks(falseTasks...),
+		desc:       fmt.Sprintf("if %s (%s)", op.Desc(), util.FunctionName(op.DoReference())),
+	}
 }
 
-func WaitUntilHas(selector string, maxRetry int, delay time.Duration) *WhileTask {
+func While(op types.ConditionalTask, trueTasks []types.ITask, falseTasks []types.ITask, maxRetry int) *WhileTask {
+	return &WhileTask{
+		op:         op.Do,
+		trueTasks:  NewTasks(trueTasks...),
+		falseTasks: NewTasks(falseTasks...),
+		maxRetry:   maxRetry,
+		desc:       fmt.Sprintf("while %s (%s,%d)", op.Desc(), util.FunctionName(op.DoReference()), maxRetry),
+	}
+}
+
+func WhileUntilHas(selector string, maxRetry int, delay time.Duration) *WhileTask {
 	op := func(pc *types.PipelineContext) (bool, error) {
 		has, _, err := pc.Query().Has(selector)
 		return has, err
@@ -130,10 +159,19 @@ func WaitUntilHas(selector string, maxRetry int, delay time.Duration) *WhileTask
 	iftrue := NewTasks()
 	iffalse := NewTasks(Sleep(delay))
 
-	return &WhileTask{op: op, iftrue: iftrue, iffalse: iffalse, maxRetry: maxRetry}
+	return &WhileTask{
+		op:         op,
+		trueTasks:  iftrue,
+		falseTasks: iffalse,
+		maxRetry:   maxRetry,
+		desc:       fmt.Sprintf("while until has %q", selector),
+	}
 }
 
 func ForEachElement(selector string, tasks []types.ITask) *ForEachElementTask {
-	each := NewTasks(tasks...)
-	return &ForEachElementTask{selector: selector, each: each}
+	return &ForEachElementTask{
+		selector: selector,
+		tasks:    NewTasks(tasks...),
+		desc:     fmt.Sprintf("foreach %q", selector),
+	}
 }

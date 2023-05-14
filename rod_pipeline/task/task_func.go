@@ -3,6 +3,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -10,29 +11,24 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 
 	"github.com/darimuri/rod-remote/rod_pipeline/types"
+	"github.com/darimuri/rod-remote/rod_pipeline/util"
 )
 
 func Open(url string) *Task {
 	f := func(pc *types.PipelineContext) error {
 		return pc.Page().Navigate(url)
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("open %s", url)}
 	return task
 }
 
-func WaitLoad() *Task {
+func WaitRequestIdle(timeout time.Duration) *Task {
 	f := func(pc *types.PipelineContext) error {
-		return pc.Page().WaitLoad()
+		wait := pc.Page().Timeout(timeout).MustWaitRequestIdle()
+		wait()
+		return nil
 	}
-	task := &Task{op: f}
-	return task
-}
-
-func WaitIdle(dur time.Duration) *Task {
-	f := func(pc *types.PipelineContext) error {
-		return pc.Page().WaitIdle(dur)
-	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("wait request idle until %s", timeout.String())}
 	return task
 }
 
@@ -55,7 +51,7 @@ func Click(selector string, handler types.DialogHandlerFunc) *Task {
 
 		return el.Click(proto.InputMouseButtonLeft, 1)
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("click %s", selector)}
 	return task
 }
 
@@ -78,7 +74,7 @@ func Tap(selector string, handler types.DialogHandlerFunc) *Task {
 
 		return el.Tap()
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("tap %q", selector)}
 	return task
 }
 
@@ -96,7 +92,7 @@ func RemoveClass(selector string, class string) *Task {
 
 		return nil
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("remove class %s from %s", class, selector)}
 	return task
 }
 
@@ -114,7 +110,7 @@ func AddClass(selector string, class string) *Task {
 
 		return nil
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("add class %s to %s", class, selector)}
 	return task
 }
 
@@ -135,7 +131,7 @@ func Input(selector string, str string) *Task {
 
 		return nil
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("input %s to %s", str, selector)}
 	return task
 }
 
@@ -147,7 +143,7 @@ func Type(keys ...input.Key) *Task {
 
 		return nil
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("type keys %v", keys)}
 	return task
 
 }
@@ -156,7 +152,7 @@ func Reload() *Task {
 	f := func(pc *types.PipelineContext) error {
 		return pc.Page().Reload()
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: "reload"}
 	return task
 }
 
@@ -165,7 +161,7 @@ func Sleep(dur time.Duration) *Task {
 		time.Sleep(dur)
 		return nil
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("sleep %s", dur.String())}
 	return task
 }
 
@@ -173,7 +169,7 @@ func Stop(message string) *Task {
 	f := func(pc *types.PipelineContext) error {
 		return errors.New(message)
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("stop with message %s", message)}
 	return task
 }
 
@@ -181,7 +177,7 @@ func Custom(c func(pc *types.PipelineContext) error) *Task {
 	f := func(pc *types.PipelineContext) error {
 		return c(pc)
 	}
-	task := &Task{op: f}
+	task := &Task{op: f, desc: fmt.Sprintf("execute %s", util.FunctionName(c))}
 	return task
 }
 
@@ -192,7 +188,9 @@ func ForEach(selector string, ef types.EachElementFunc) *Task {
 			return err
 		}
 		for _, el := range els {
-			if stop, errEl := ef(pc, el); errEl != nil {
+			log.Println(">>", util.FunctionName(ef))
+			stop, errEl := ef(pc, el)
+			if errEl != nil {
 				return errEl
 			} else if stop {
 				break
@@ -200,10 +198,10 @@ func ForEach(selector string, ef types.EachElementFunc) *Task {
 		}
 		return nil
 	}
-	return &Task{op: f}
+	return &Task{op: f, desc: fmt.Sprintf("foreach %q", selector)}
 }
 
-func Has(selector string) types.ConditionalFunc {
+func Has(selector string) types.ConditionalTask {
 	f := func(pc *types.PipelineContext) (bool, error) {
 		has, _, err := pc.Query().Has(selector)
 		if err != nil {
@@ -212,18 +210,18 @@ func Has(selector string) types.ConditionalFunc {
 
 		return has, nil
 	}
-	return f
+	return types.NewConditionalTask(f, fmt.Sprintf("has %q", selector))
 }
 
-func IsTrue(b bool) types.ConditionalFunc {
+func IsTrue(b bool) types.ConditionalTask {
 	f := func(pc *types.PipelineContext) (bool, error) {
 		return b, nil
 	}
 
-	return f
+	return types.NewConditionalTask(f, "isTrue")
 }
 
-func ContainsText(selector, text string) types.ConditionalFunc {
+func ContainsText(selector, text string) types.ConditionalTask {
 	f := func(pc *types.PipelineContext) (bool, error) {
 		has, el, err := pc.Query().Has(selector)
 		if err != nil {
@@ -241,10 +239,10 @@ func ContainsText(selector, text string) types.ConditionalFunc {
 		return strings.Contains(strings.TrimSpace(s), text), nil
 	}
 
-	return f
+	return types.NewConditionalTask(f, fmt.Sprintf("%q contains text %q", selector, text))
 }
 
-func Visible(selector string) types.ConditionalFunc {
+func Visible(selector string) types.ConditionalTask {
 	f := func(pc *types.PipelineContext) (bool, error) {
 		has, el, err := pc.Query().Has(selector)
 		if err != nil {
@@ -254,7 +252,9 @@ func Visible(selector string) types.ConditionalFunc {
 			return false, nil
 		}
 
-		return el.Visible()
+		visible, errVisible := el.Visible()
+		return visible, errVisible
 	}
-	return f
+
+	return types.NewConditionalTask(f, fmt.Sprintf("%q is visible", selector))
 }

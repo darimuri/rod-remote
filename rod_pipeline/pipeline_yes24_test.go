@@ -44,17 +44,16 @@ var _ = Describe("yes24", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		FIt("pyongchang", func() {
-			productId := 44176
-			session := "18시 00분"
-			sessionDate := "2023-01-14"
+		FIt("ggyongi art center", func() {
+			productId := 45417
+			session := "13시 00분"
+			sessionDate := "2023-06-03"
 
 			url := fmt.Sprintf("http://m.ticket.yes24.com/Perf/Detail/PerfInfo.aspx?IdPerf=%d", productId)
 
 			loginTasks := rp.Tasks(
 				task.Tap("#wingScroll_wrap > div > div.greetingMsg > span.btn > a", nil),
-				task.WaitLoad(),
-				task.WaitIdle(time.Second*60),
+				task.WaitRequestIdle(time.Second*10),
 				task.Input("#SMemberID", rp.TestId),
 				task.Input("#SMemberPassword", rp.TestPass),
 				task.Tap("#btn_login", nil),
@@ -62,8 +61,7 @@ var _ = Describe("yes24", func() {
 
 			reloadPageTasks := rp.Tasks(
 				task.Reload(),
-				task.WaitLoad(),
-				task.WaitIdle(time.Minute),
+				task.WaitRequestIdle(time.Second*10),
 				task.Custom(func(pc *types.PipelineContext) error {
 					time.Sleep(time.Second)
 					return nil
@@ -73,27 +71,32 @@ var _ = Describe("yes24", func() {
 			var sessionSelected bool
 			var reserved bool
 
-			reserveButtonSelector := "#gd_norInfo > div.gd_btn > ul > li:nth-child(1) > a"
-			//reserveButtonSelector := "#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red"
-
+			//reserveButtonSelector := "#gd_norInfo > div.gd_btn > ul > li:nth-child(1) > a"
 			cut.
 				Open(url).
-				WaitLoad().
-				WaitIdle(time.Minute).
+				WaitRequestIdle(time.Second*10).
 				Tap("#entWing > span", nil).
 				If(
 					task.ContainsText("#wingScroll_wrap > div > div.greetingMsg > span.btn > a > em", "로그인"),
 					loginTasks, rp.Else(task.Tap("#entWing > span", nil)),
 				).
+				WaitRequestIdle(time.Second*10).
+				If(
+					task.Visible("#campaign_wrap > div > div.btn_full.btn_full2D.mgt20.pab30 > ul > li:nth-child(1) > a > em"),
+					rp.Then(
+						task.Tap("#campaign_wrap > div > div.btn_full.btn_full2D.mgt20.pab30 > ul > li:nth-child(1) > a > em", nil),
+						task.WaitRequestIdle(time.Second*10),
+					),
+					rp.Else(),
+				).
 				While(
-					task.Visible(reserveButtonSelector),
-					rp.Then(task.Tap(reserveButtonSelector, nil)),
+					task.Visible("#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red"),
+					rp.Then(task.Tap("#gd_norInfo > div.gd_btn > a.btn_c.btn_buy.btn_red", nil)),
 					reloadPageTasks,
 					10000,
 				).
-				WaitLoad().
-				WaitIdle(time.Minute).
-				WaitUntilHas("#calendar > div.calendar > ul > li.tp_dayN.tickP", 1000, time.Millisecond*10).
+				WaitRequestIdle(time.Second*10).
+				WhileUntilHas("#calendar > div.calendar > ul > li.tp_dayN.tickP", 1000, time.Millisecond*10).
 				While(
 					task.IsTrue(!sessionSelected),
 					rp.Then(
@@ -126,17 +129,20 @@ var _ = Describe("yes24", func() {
 							}),
 						)),
 					), rp.Else(), 100).
-				WaitLoad().
-				WaitIdle(time.Minute).
-				WaitUntilHas("#ulTime > li", 1000, time.Millisecond*10).
+				WaitRequestIdle(time.Second*10).
+				WhileUntilHas("#ulTime > li", 1000, time.Millisecond*10).
 				ForEach("#ulTime > li", func(_ *types.PipelineContext, el *rod.Element) (bool, error) {
 					a, err := el.Attribute("timeinfo")
 					if err != nil {
 						return true, err
 					}
 
-					timeInto := strings.TrimSpace(*a)
-					if a != nil && timeInto == session {
+					if a == nil {
+						return false, nil
+					}
+
+					timeInfo := strings.TrimSpace(*a)
+					if timeInfo == session {
 						return true, el.Tap()
 					}
 

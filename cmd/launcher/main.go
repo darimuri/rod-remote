@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -135,5 +136,14 @@ func main() {
 	// 	log.Panicf("failed to connect browser control url %s\n", controlURL)
 	// }
 
-	select {}
+	http.HandleFunc("/controlURL", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			writer.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		writer.Write([]byte(controlURL))
+	})
+
+	http.ListenAndServe(":8080", nil)
 }
