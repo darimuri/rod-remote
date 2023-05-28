@@ -17,14 +17,14 @@ import (
 	"github.com/darimuri/rod-remote/rod_pipeline/userod"
 )
 
-var _ = Describe("yes24", func() {
+var _ = PDescribe("yes24", func() {
 	Context("concert", func() {
 		var b *rod.Browser
 		var p *rod.Page
 		var cut *rp.Pipeline
 
 		BeforeEach(func() {
-			b = rod.New().ControlURL(rp.ControlUrl)
+			b = rod.New().ControlURL(controlUrl)
 			err := b.Connect()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -44,7 +44,7 @@ var _ = Describe("yes24", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		FIt("ggyongi art center", func() {
+		It("ggyongi art center", func() {
 			productId := 45417
 			session := "13시 00분"
 			sessionDate := "2023-06-03"
@@ -54,8 +54,8 @@ var _ = Describe("yes24", func() {
 			loginTasks := rp.Tasks(
 				task.Tap("#wingScroll_wrap > div > div.greetingMsg > span.btn > a", nil),
 				task.WaitRequestIdle(time.Second*10),
-				task.Input("#SMemberID", rp.TestId),
-				task.Input("#SMemberPassword", rp.TestPass),
+				task.Input("#SMemberID", testId),
+				task.Input("#SMemberPassword", testPass),
 				task.Tap("#btn_login", nil),
 			)
 
@@ -220,6 +220,8 @@ var _ = Describe("yes24", func() {
 									//if *id == "area2" {
 									//	return userod.EvalEventScript(el, "onclick")
 									//}
+
+									panic("block selection is not implemented yet")
 
 									return false, nil
 								}),
